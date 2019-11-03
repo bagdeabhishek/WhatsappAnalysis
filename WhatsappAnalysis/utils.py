@@ -6,6 +6,8 @@ import logging
 from collections import Counter
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib as plt
+import nltk
+
 logging.basicConfig(filename="log", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
@@ -89,26 +91,36 @@ def __get_relevant_words(sentence):
     return ' '.join(nouns) if nouns else None
 
 
-def get_word_cloud(df_col):
+def get_word_freq_dict(df_col):
     """
-    Get word cloud from a DataFrame Column
-    :param df_col: The column from which to generate 
-    :type df_col:
-    :return:
-    :rtype:
+    Get word frequency dictionary from a DataFrame Column
+    :param df_col: The column from which to generate word frequency dictionary
+    :type df_col: DataFrame
+    :return: Dictionary where key is the word and value is the frequency
+    :rtype: Dict
     """
     results = Counter()
     df_col.str.lower().str.split().apply(results.update)
     results = sorted(results.items(), key=lambda item: item[1], reverse=True)
-    stopwords = STOPWORDS
     d = {}
     for word, freq in results:
-        # print(x,y)
         if len(word) > 3:
             d[word] = freq
-    word_cloud = WordCloud(stopwords=stopwords, background_color="white", width=800, height=1000,
-                          max_words=300).generate_from_frequencies(frequencies=d)
-    plt.figure(figsize=(50, 50))
+    return d
+
+
+def plot_word_cloud(word_freq_dict, stopwords=STOPWORDS, background_color="white", width=800, height=1000,
+                      max_words=300,figsize=(50, 50)):
+    """
+    Display the Word Cloud using Matplotlib
+    :param word_freq_dict: Dictionary of word frequencies
+    :type word_freq_dict: Dict
+    :return: None
+    :rtype: None
+    """
+    word_cloud = WordCloud(stopwords=stopwords, background_color=background_color, width=width, height=height,
+                           max_words=max_words).generate_from_frequencies(frequencies=word_freq_dict)
+    plt.figure(figsize=figsize)
     plt.imshow(word_cloud, interpolation='bilinear')
     plt.axis("off")
     plt.show()
