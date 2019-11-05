@@ -7,6 +7,10 @@ from collections import Counter
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib as plt
 import nltk
+import seaborn as sns
+
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
 
 logging.basicConfig(filename="log", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -110,7 +114,7 @@ def get_word_freq_dict(df_col):
 
 
 def plot_word_cloud(word_freq_dict, stopwords=STOPWORDS, background_color="white", width=800, height=1000,
-                      max_words=300,figsize=(50, 50)):
+                    max_words=300, figsize=(50, 50)):
     """
     Display the Word Cloud using Matplotlib
     :param word_freq_dict: Dictionary of word frequencies
@@ -124,3 +128,120 @@ def plot_word_cloud(word_freq_dict, stopwords=STOPWORDS, background_color="white
     plt.imshow(word_cloud, interpolation='bilinear')
     plt.axis("off")
     plt.show()
+
+
+def top_emojis(df, name):
+    """
+    Get the top emojis used by a user.
+    :param df: The Dataframe with user name and emoji
+    :type df: DataFrame
+    :param name: Name of the user for which to find the top emojis used
+    :type name: String
+    :return: list of tuples with (emoji, frequency in the chat) in sorted order
+    :rtype: list
+    """
+    counter = Counter()
+    df.loc[df["from"] == name]["emojis"].str.split(",").apply(counter.update)
+    counter = (sorted(counter.items(), key=lambda x: x[1], reverse=True))
+    return counter
+
+
+def clean_data(df, new_name=None):
+    """
+    Clean the given data and perform basic cleaning operations
+    :param df: The DataFrame extracted from given whatsapp chats
+    :type df: DataFrame
+    :param new_name: list of names if you want to replace senders name to something shorter
+    :type new_name: List
+    :return: Cleaned DataFrame
+    :rtype: DataFrame
+    """
+
+    if new_name:
+        original_name = df["from"].unique().tolist()
+        df.replace(original_name, new_name, inplace=True)
+    df.dropna(subset=['text'], inplace=True)
+    df.set_index('time', inplace=True, drop=False)
+    return df
+
+
+def plot_message_counts(df, size=(20, 4), freq='d'):
+    """
+    Get the statistics of messages sampled by day
+    :param freq: String representing the sampling frequencies (refer:https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases)
+    :type freq: String
+    :param size: Size of the generated plot
+    :type size: tuple(height,width)
+    :param df: The extracted Dataframe
+    :type df: DataFrame
+    :return:
+    :rtype:
+    """
+    df_resampled = df.resample(freq)
+    sns.set(rc={'figure.figsize': size})
+    df_resampled.count().plot(linewidth=0.5)
+
+
+def group_by_time(df, period='day'):
+    """
+    Group the whole data by a time period and return the description
+    :param df:
+    :type df:
+    :param period:
+    :type period:
+    :return:
+    :rtype:
+    """
+    description = df.groupby(df.time.dt.day).describe()
+    ls_from = description['from']
+    ls_text = description[]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
