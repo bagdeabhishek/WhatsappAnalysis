@@ -9,6 +9,7 @@ import matplotlib as plt
 import nltk
 import seaborn as sns
 from functools import reduce
+import networkx as nx
 
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
@@ -207,7 +208,7 @@ def plot_emoji_heatmap(df, size=(20, 5), agg='from'):
     df_smiley_reduced = pd.DataFrame(ls_smiley, columns=["agg", "smiley", "count"])
     df_smiley_reduced = df_smiley_reduced.pivot_table('count', ['agg'], 'smiley').fillna(0)
     sns.set(rc={'figure.figsize': size})
-    sns.heatmap(df_smiley_reduced, cmap="Blues")
+    sns.heatmap(df_smiley_reduced.transpose(), cmap="Blues")
 
 
 def __custom_smiley_aggregator(series):
