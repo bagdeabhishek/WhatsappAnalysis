@@ -8,6 +8,7 @@ from wordcloud import WordCloud, STOPWORDS
 import matplotlib as plt
 import nltk
 import seaborn as sns
+from functools import reduce
 
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
@@ -108,8 +109,7 @@ def get_word_freq_dict(df_col):
     results = sorted(results.items(), key=lambda item: item[1], reverse=True)
     d = {}
     for word, freq in results:
-        if len(word) > 3:
-            d[word] = freq
+        d[word] = freq
     return d
 
 
@@ -132,7 +132,7 @@ def plot_word_cloud(word_freq_dict, stopwords=STOPWORDS, background_color="white
 
 def top_emojis(df, name):
     """
-    Get the top emojis used by a user.
+    Get the top emojis used by a user. (NO USE NOW)
     :param df: The Dataframe with user name and emoji
     :type df: DataFrame
     :param name: Name of the user for which to find the top emojis used
@@ -194,54 +194,26 @@ def group_by_time(df, period='day'):
     """
     description = df.groupby(df.time.dt.day).describe()
     ls_from = description['from']
-    ls_text = description[]
+    ls_text = description['cleaned_text']
+    plot_emoji_heatmap(df, agg=df.time.dt.day)  # Plot daily emoji use heat map
 
 
+def plot_emoji_heatmap(df, size=(20, 5), agg='from'):
+    df_smiley = df.groupby(agg)['emojis'].agg(['count', __custom_smiley_aggregator])
+    ls_smiley = []
+    for x in df_smiley.itertuples():
+        for smiley, count in x._2:
+            ls_smiley.append((x.Index, smiley, count))
+    df_smiley_reduced = pd.DataFrame(ls_smiley, columns=["agg", "smiley", "count"])
+    df_smiley_reduced = df_smiley_reduced.pivot_table('count', ['agg'], 'smiley').fillna(0)
+    sns.set(rc={'figure.figsize': size})
+    sns.heatmap(df_smiley_reduced, cmap="Blues")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def __custom_smiley_aggregator(series):
+    c = Counter()
+    for x in series.tolist():
+        if x:
+            for smiley in x.split(','):
+                c.update(smiley)
+    return c.most_common(5)
