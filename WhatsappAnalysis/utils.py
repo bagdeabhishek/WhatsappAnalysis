@@ -8,6 +8,7 @@ from wordcloud import WordCloud, STOPWORDS
 import matplotlib as plt
 import nltk
 import seaborn as sns
+import string
 from functools import reduce
 import networkx as nx
 
@@ -200,6 +201,20 @@ def group_by_time(df, period='day'):
 
 
 def plot_emoji_heatmap(df, size=(20, 5), agg='from'):
+    """
+    Plot an emoji heatmap according to the specified column passed as agg parameter
+    Eg. if agg='From' this plots a heatmap according to the smileys/emojis used by a person
+    if agg= df.time.dt.hour will give a heatmap of emojis used at some time of the hour
+
+    :param df:
+    :type df:
+    :param size:
+    :type size:
+    :param agg:
+    :type agg:
+    :return:
+    :rtype:
+    """
     df_smiley = df.groupby(agg)['emojis'].agg(['count', __custom_smiley_aggregator])
     ls_smiley = []
     for x in df_smiley.itertuples():
@@ -211,6 +226,28 @@ def plot_emoji_heatmap(df, size=(20, 5), agg='from'):
     sns.heatmap(df_smiley_reduced.transpose(), cmap="Blues")
 
 
+def get_busiest_day_stats(df, wordcloud=True):
+    """
+    Get the stats of the busiest day (day with most messages). Optionally generate a wordcloud of the words used.
+
+    :param df:
+    :type df:
+    :param wordcloud:
+    :type wordcloud:
+    :return:
+    :rtype:
+    """
+    df_grouped_by_date = df.groupby(df.time.dt.date)
+    max_chats_day = df_grouped_by_date.count()['clean_text'].idxmax()
+    day_of_max_chats = df_grouped_by_date.get_group(max_chats_day)
+    if wordcloud:
+        frequency_list = day_of_max_chats['clean_text'].agg(['count', __custom_words_accumulator])['__custom_words_accumulator']
+        frequency_dict = dict(frequency_list)
+        plot_word_cloud(frequency_dict)
+
+    return day_of_max_chats.describe().transpose()
+
+
 def __custom_smiley_aggregator(series):
     c = Counter()
     for x in series.tolist():
@@ -218,3 +255,13 @@ def __custom_smiley_aggregator(series):
             for smiley in x.split(','):
                 c.update(smiley)
     return c.most_common(5)
+
+
+def __custom_words_accumulator(series):
+    c = Counter()
+    for sentence in series:
+        if sentence:
+            sentence = sentence.lower()  # Convert all text to lower case
+            sentence = sentence.translate(str.maketrans('', '', string.punctuation))  # Remove punctuations
+            c.update(sentence.split())
+    return c.most_common()
