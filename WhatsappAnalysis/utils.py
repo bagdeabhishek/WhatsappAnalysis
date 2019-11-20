@@ -184,9 +184,11 @@ def plot_message_counts(df, size=(20, 4), freq='d'):
     df_resampled.count().plot(linewidth=0.5)
 
 
-def group_by_time(df, period='day'):
+def group_by_time(df, period=None , plot=True):
     """
     Group the whole data by a time period and return the description
+    :param plot:
+    :type plot:
     :param df:
     :type df:
     :param period:
@@ -194,18 +196,25 @@ def group_by_time(df, period='day'):
     :return:
     :rtype:
     """
-    description = df.groupby(df.time.dt.day).describe()
+    if not period:
+        period = df.time.dt.day
+    description = df.groupby(period).describe()
     ls_from = description['from']
-    ls_text = description['cleaned_text']
-    plot_emoji_heatmap(df, agg=df.time.dt.day)  # Plot daily emoji use heat map
+    ls_text = description['clean_text']
+    if plot:
+        fig, axs = plt.subplots(ncols=2)
+        plot_emoji_heatmap(df, agg=period, axs=axs[0])  # Plot daily emoji use heat map
+        plot_no_of_emojis(df, agg=period, axs=axs[1])
 
 
-def plot_emoji_heatmap(df, size=(20, 5), agg='from'):
+def plot_emoji_heatmap(df, size=(20, 5), agg='from', axs=None):
     """
     Plot an emoji heatmap according to the specified column passed as agg parameter
     Eg. if agg='From' this plots a heatmap according to the smileys/emojis used by a person
     if agg= df.time.dt.hour will give a heatmap of emojis used at some time of the hour
 
+    :param axs:
+    :type axs:
     :param df:
     :type df:
     :param size:
@@ -223,7 +232,7 @@ def plot_emoji_heatmap(df, size=(20, 5), agg='from'):
     df_smiley_reduced = pd.DataFrame(ls_smiley, columns=["agg", "smiley", "count"])
     df_smiley_reduced = df_smiley_reduced.pivot_table('count', ['agg'], 'smiley').fillna(0)
     sns.set(rc={'figure.figsize': size})
-    sns.heatmap(df_smiley_reduced.transpose(), cmap="Blues")
+    sns.heatmap(df_smiley_reduced.transpose(), cmap="Blues", ax=axs)
 
 
 def get_busiest_day_stats(df, wordcloud=True):
@@ -241,11 +250,35 @@ def get_busiest_day_stats(df, wordcloud=True):
     max_chats_day = df_grouped_by_date.count()['clean_text'].idxmax()
     day_of_max_chats = df_grouped_by_date.get_group(max_chats_day)
     if wordcloud:
-        frequency_list = day_of_max_chats['clean_text'].agg(['count', __custom_words_accumulator])['__custom_words_accumulator']
+        frequency_list = day_of_max_chats['clean_text'].agg(['count', __custom_words_accumulator])[
+            '__custom_words_accumulator']
         frequency_dict = dict(frequency_list)
         plot_word_cloud(frequency_dict)
 
     return day_of_max_chats.describe().transpose()
+
+
+def plot_no_of_emojis(df, agg='from', axs=None):
+    agg_df = df.groupby(agg)['emojis'].agg(count_emoji=(__custom_smiley_count_aggregator))
+    sns.barplot(x=agg_df.index, y="count_emoji", data=agg_df, ax=axs)
+
+
+def __custom_smiley_count_aggregator(series):
+    s = set()
+    for x in series.tolist():
+        if x:
+            for y in x.split(','):
+                s.update(y)
+    return len(s)
+
+
+def __custom_smiley_count_aggregator(series):
+    s = set()
+    for x in series.tolist():
+        if x:
+            for y in x.split(','):
+                s.update(y)
+    return len(s)
 
 
 def __custom_smiley_aggregator(series):
