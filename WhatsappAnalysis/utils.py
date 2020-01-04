@@ -11,6 +11,9 @@ import seaborn as sns
 import string
 from functools import reduce
 import networkx as nx
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
@@ -184,7 +187,18 @@ def plot_message_counts(df, size=(20, 4), freq='d'):
     df_resampled.count().plot(linewidth=0.5)
 
 
-def group_by_time(df, period=None , plot=True):
+def plot_tfidf_word_cloud(df, size=(20, 5) ,agg ='from', axs):
+    df_agg = df.groupby(agg)
+    df_words = df_agg.POS.apply(__get_string_from_columns)
+    tfidf_vectorizer = TfidfVectorizer(use_idf=True, sublinear_tf=True)
+    vsc = tfidf_vectorizer.fit_transform(df_words.to_list())
+    for a in vsc:
+        pd_vector = pd.DataFrame(a.T.todense(), index=tfidf_vectorizer.get_feature_names(), columns=["tfidf"])
+        pd_vector = pd_vector.sort_values(by=["tfidf"], ascending=False).to_dict()['tfidf']
+        plot_word_cloud(pd_vector,figsize=size)
+    return vsc
+
+def group_by_time(df, period=None, plot=True):
     """
     Group the whole data by a time period and return the description
     :param plot:
@@ -202,9 +216,11 @@ def group_by_time(df, period=None , plot=True):
     ls_from = description['from']
     ls_text = description['clean_text']
     if plot:
-        fig, axs = plt.subplots(ncols=2)
+        fig, axs = plt.subplots(ncols=3)
         plot_emoji_heatmap(df, agg=period, axs=axs[0])  # Plot daily emoji use heat map
         plot_no_of_emojis(df, agg=period, axs=axs[1])
+        plot_tfidf_word_cloud(df, agg=period, axs=axs[2])
+        # add the plot function for tfidf based word clouds for wach category ()code mixed is aprobelm definitely
 
 
 def plot_emoji_heatmap(df, size=(20, 5), agg='from', axs=None):
@@ -298,3 +314,13 @@ def __custom_words_accumulator(series):
             sentence = sentence.translate(str.maketrans('', '', string.punctuation))  # Remove punctuations
             c.update(sentence.split())
     return c.most_common()
+
+
+def __get_string_from_columns(series):
+    agg_string = " "
+    for string in series:
+        if string:
+            for word in string.split():
+                if len(word) > 3:
+                    agg_string += " " + word.lower()
+    return agg_string
